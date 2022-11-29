@@ -1,76 +1,56 @@
-﻿using System;
-using System.Net;
+﻿using System.Net;
 using System.Net.Mail;
-using System.Net.Mime;
-using System.Threading;
-using System.ComponentModel;
+
 namespace Examples.SmtpExamples.Async
 {
     public class SimpleAsynchronousExample
     {
-        static bool mailSent = false;
-        private static void SendCompletedCallback(object sender, AsyncCompletedEventArgs e)
-        {
-            // Get the unique identifier for this asynchronous operation.
-            String token = (string)e.UserState;
-
-            if (e.Cancelled)
-            {
-                Console.WriteLine("[{0}] Send canceled.", token);
-            }
-            if (e.Error != null)
-            {
-                Console.WriteLine("[{0}] {1}", token, e.Error.ToString());
-            }
-            else
-            {
-                Console.WriteLine("Message sent.");
-            }
-            mailSent = true;
-        }
+        public const int MAX_ATTEMPTS = 3;
         public static void Main(string[] args)
         {
-            // Temporary hard-coded credentials
-            SmtpClient client = new SmtpClient("smtp.gmail.com",465)
+            string messageRecipientAddress = args[0];
+            string messageSubject = args[1];
+            string messageBody = args[2];
+            int attemptNumber = 0;
+
+            if(args.Length == 4) {
+                attemptNumber = Int32.Parse(args[3]);
+            }
+
+            //Client info
+            SmtpClient client = new SmtpClient("smtp-relay.sendinblue.com", 587)
             {
-                Credentials = new NetworkCredential("text.mail.ex@gmail.com", "c4CDqQ3AFZtgLBegfLt6"),
                 EnableSsl = true,
+                Credentials = new NetworkCredential("text.mail.ex@gmail.com","OZ1aBEbPHjkLD5G6"),
             };
 
-            // Specify the email sender.
-            // Create a mailing address
-            MailAddress from = new MailAddress("text.mail.ex@gmail.com", "John Doe",
-            System.Text.Encoding.UTF8);
-            // Set destinations for the email message.
-            MailAddress to = new MailAddress("jhsomemedia@gmail.com");
-            // Specify the message content.
-            MailMessage message = new MailMessage(from, to);
-            message.Body = "This is a test email message sent by an application. ";
-            // Include some non-ASCII characters in body and subject.
-            //string someArrows = new string(new char[] { '\u2190', '\u2191', '\u2192', '\u2193' });
-            //message.Body += Environment.NewLine + someArrows;
-            message.BodyEncoding = System.Text.Encoding.UTF8;
-            message.Subject = "test message 1";
-            message.SubjectEncoding = System.Text.Encoding.UTF8;
-            // Set the method that is called back when the send operation ends.
-            client.SendCompleted += new
-            SendCompletedEventHandler(SendCompletedCallback);
-            // The userState can be any object that allows your callback
-            // method to identify this send operation.
-            // For this example, the userToken is a string constant.
-            string userState = "test message1";
-            client.SendAsync(message, userState);
-            Console.WriteLine("Sending message... press c to cancel mail. Press any other key to exit.");
-            string answer = Console.ReadLine();
-            // If the user canceled the send, and mail hasn't been sent yet,
-            // then cancel the pending operation.
-            if (answer.StartsWith("c") && mailSent == false)
+            //Message info
+            MailAddress from = new MailAddress("text.mail.ex@gmail.com", "Do not reply");
+            MailAddress to = new MailAddress(messageRecipientAddress);
+            MailMessage message = new MailMessage(from, to)
             {
-                client.SendAsyncCancel();
+                Body = messageBody,
+                Subject = messageSubject
+            };
+           
+            Console.WriteLine("Sending message...");
+            try {
+                client.Send(message);
+                Console.WriteLine("Message delivered");
             }
-            // Clean up.
+
+            catch(Exception e){
+                Console.WriteLine(e.ToString());
+                Console.WriteLine("Message failed to send");
+                if(attemptNumber < (MAX_ATTEMPTS - 1)){
+                    Console.WriteLine("Retrying");
+                    Main(new string[] { messageRecipientAddress, messageBody, messageSubject, (attemptNumber + 1).ToString() });
+                }
+                else {
+                    Console.WriteLine("Attempted to send " + MAX_ATTEMPTS +" times, aborting");
+                }
+            }
             message.Dispose();
-            Console.WriteLine("Goodbye.");
         }
     }
 }
