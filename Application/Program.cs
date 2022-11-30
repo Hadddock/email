@@ -14,10 +14,8 @@ static class Program
         // Invoke Worker
         using IServiceScope serviceScope = host.Services.CreateScope();
         IServiceProvider provider = serviceScope.ServiceProvider;
-        var workerInstance = provider.GetRequiredService<Worker>();
-        workerInstance.SetCredentials();
-        workerInstance.DoWork(args);
-        host.Run();
+        var workerInstance = provider.GetRequiredService<MessageWorker>();
+        workerInstance.CreateMessage(args);
     }
 
     static IHostBuilder CreateDefaultBuilder()
@@ -29,12 +27,11 @@ static class Program
             })
             .ConfigureServices(services =>
             {
-                services.AddSingleton<Worker>();
+                services.AddSingleton<MessageWorker>();
             });
     }
 
-    // Worker.cs
-    internal class Worker
+    internal class MessageWorker
     {
         private const int MAX_ATTEMPTS = 3;
         private readonly IConfiguration configuration;
@@ -43,7 +40,7 @@ static class Program
         private static string? smtpClientLogin;
         private static string? smtpClientPassword;
 
-        public Worker(IConfiguration configuration)
+        public MessageWorker(IConfiguration configuration)
         {
             this.configuration = configuration;
         }
@@ -60,7 +57,7 @@ static class Program
             }
         }
 
-        public void DoWork(string[] args)
+        internal void CreateMessage(string[] args)
         {
             string messageRecipientAddress = args[0];
             string messageSubject = args[1];
@@ -74,7 +71,7 @@ static class Program
 
             if (smtpClientLogin is null)
             {
-                Console.WriteLine("client login information is invalid");
+                Console.WriteLine("Client login information is invalid");
                 return;
             }
 
@@ -89,7 +86,9 @@ static class Program
             SendMessage(client, message);
         }
 
-        public void SendMessage(SmtpClient client, MailMessage message, int attemptNumber = 0) {
+        private void SendMessage(SmtpClient client, MailMessage message, int attemptNumber = 0) 
+        {
+            Console.WriteLine("Attempting to send message...");
             try
             {
                 client.Send(message);
@@ -105,9 +104,10 @@ static class Program
                     Console.WriteLine("Retrying");
                     SendMessage(client, message, attemptNumber + 1);
                 }
+
                 else
                 {
-                    Console.WriteLine("Attempted to send " + MAX_ATTEMPTS + " times, aborting");
+                    Console.WriteLine("Attempted to send " + MAX_ATTEMPTS + " times. Aborting");
                 }
             }
         }
