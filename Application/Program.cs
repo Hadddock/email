@@ -12,6 +12,10 @@ namespace Message
     {
         public static void Main(string[] args)
         {
+            if (args.Length < 3) {
+                throw new ArgumentException("Main function requires the message recipient " +
+                    "address, the message subject, and the message body arguments respectively.");
+            }
             var host = CreateDefaultBuilder().Build();
             using IServiceScope serviceScope = host.Services.CreateScope();
             IServiceProvider provider = serviceScope.ServiceProvider;
@@ -129,7 +133,8 @@ namespace Message
 
                         else
                         {
-                            Console.WriteLine("Attempted to send " + MAX_ATTEMPTS + " times. Aborting");
+                            Console.WriteLine("Attempted to send " + MAX_ATTEMPTS + 
+                                " times. Aborting");
                         }
                     }
                 }
