@@ -8,15 +8,11 @@ using System.IO;
 
 namespace Message
 {
-    public static class Program
+    public class Program
     {
         public static void Main(string[] args)
         {
-            var dummy = typeof(Microsoft.Extensions.Hosting.Host);
-            // Setup Host
             var host = CreateDefaultBuilder().Build();
-
-            // Invoke Worker
             using IServiceScope serviceScope = host.Services.CreateScope();
             IServiceProvider provider = serviceScope.ServiceProvider;
             var workerInstance = provider.GetRequiredService<MessageWorker>();
@@ -40,10 +36,10 @@ namespace Message
         {
             private const int MAX_ATTEMPTS = 3;
             private readonly IConfiguration configuration;
-            private static string? smtpClientServer;
-            private static int smtpClientPort;
-            private static string? smtpClientLogin;
-            private static string? smtpClientPassword;
+            private readonly string? smtpClientServer;
+            private readonly int smtpClientPort;
+            private readonly string? smtpClientLogin;
+            private readonly string? smtpClientPassword;
 
             public MessageWorker(IConfiguration configuration)
             {
@@ -57,6 +53,7 @@ namespace Message
                     smtpClientPort = Int32.Parse(smtpClientPortString);
                 }
             }
+
             internal void CreateMessage(string[] args)
             {
                 string messageRecipientAddress = args[0];
@@ -84,38 +81,59 @@ namespace Message
                 };
 
                 SendMessage(client, message);
-            }
-
-            private void SendMessage(SmtpClient client, MailMessage message, int attemptNumber = 0)
-            {
-                Console.WriteLine("Attempting to send message...");
-                try
+                
+                void SendMessage(SmtpClient client, MailMessage message, int attemptNumber = 0)
                 {
-                    client.Send(message);
-                    Console.WriteLine("Message delivered");
-                    using (StreamWriter w = File.AppendText("log.csv")) {
-                        w.WriteLine(string.Join(",", new string[] {"Sent", message.From.Address.ToString(), message.To.ToString(), message.Subject, message.Body, DateTime.Today.ToString("dd/MM/yyyy") }));
+                    if (message.From is null)
+                    {
+                        Console.WriteLine("MailAddress From is null. Aborting");
+                        return;
+                    }
+
+                    Console.WriteLine("Attempting to send message...");
+                    try
+                    {
+                        client.Send(message);
+                        Console.WriteLine("Message delivered");
+                        using (StreamWriter w = File.AppendText("log.csv"))
+                        {
+                            w.WriteLine(string.Join(",", new string[] 
+                            { 
+                                "Sent", 
+                                message.From.Address.ToString(), 
+                                message.To.ToString(), message.Subject, 
+                                message.Body, DateTime.Today.ToString("dd/MM/yyyy") 
+                            }));
+                        }
+                    }
+
+                    catch (Exception e)
+                    {
+                        using (StreamWriter w = File.AppendText("log.csv"))
+                        {
+                            w.WriteLine(string.Join(",", new string[] 
+                            { 
+                                "Not Sent", 
+                                message.From.Address.ToString(), 
+                                message.To.ToString(), message.Subject, 
+                                message.Body, DateTime.Today.ToString("dd/MM/yyyy") 
+                            }));
+                        }
+                        Console.WriteLine(e.ToString());
+                        Console.WriteLine("Message failed to send");
+                        if (attemptNumber < (MAX_ATTEMPTS - 1))
+                        {
+                            Console.WriteLine("Retrying");
+                            SendMessage(client, message, attemptNumber + 1);
+                        }
+
+                        else
+                        {
+                            Console.WriteLine("Attempted to send " + MAX_ATTEMPTS + " times. Aborting");
+                        }
                     }
                 }
-
-                catch (Exception e)
-                {
-                    using (StreamWriter w = File.AppendText("log.csv")) {
-                        w.WriteLine(string.Join(",", new string[] {"Not Sent", message.From.Address.ToString(), message.To.ToString(), message.Subject, message.Body, DateTime.Today.ToString("dd/MM/yyyy") }));
-                    }
-                    Console.WriteLine(e.ToString());
-                    Console.WriteLine("Message failed to send");
-                    if (attemptNumber < (MAX_ATTEMPTS - 1))
-                    {
-                        Console.WriteLine("Retrying");
-                        SendMessage(client, message, attemptNumber + 1);
-                    }
-
-                    else
-                    {
-                        Console.WriteLine("Attempted to send " + MAX_ATTEMPTS + " times. Aborting");
-                    }
-                }
+                
             }
         }
     }
