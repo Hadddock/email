@@ -43,10 +43,6 @@ static class Program
         public MessageWorker(IConfiguration configuration)
         {
             this.configuration = configuration;
-        }
-
-        public void SetCredentials()
-        {
             smtpClientServer = configuration["smtpClientServer"];
             smtpClientLogin = configuration["smtpClientLogin"];
             smtpClientPassword = configuration["smtpClientPassword"];
@@ -56,7 +52,6 @@ static class Program
                 smtpClientPort = Int32.Parse(smtpClientPortString);
             }
         }
-
         internal void CreateMessage(string[] args)
         {
             string messageRecipientAddress = args[0];
