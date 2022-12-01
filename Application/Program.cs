@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.IO;
 
 namespace Message
 {
@@ -92,10 +93,16 @@ namespace Message
                 {
                     client.Send(message);
                     Console.WriteLine("Message delivered");
+                    using (StreamWriter w = File.AppendText("log.csv")) {
+                        w.WriteLine(string.Join(",", new string[] {"Sent", message.From.Address.ToString(), message.To.ToString(), message.Subject, message.Body, DateTime.Today.ToString("dd/MM/yyyy") }));
+                    }
                 }
 
                 catch (Exception e)
                 {
+                    using (StreamWriter w = File.AppendText("log.csv")) {
+                        w.WriteLine(string.Join(",", new string[] {"Not Sent", message.From.Address.ToString(), message.To.ToString(), message.Subject, message.Body, DateTime.Today.ToString("dd/MM/yyyy") }));
+                    }
                     Console.WriteLine(e.ToString());
                     Console.WriteLine("Message failed to send");
                     if (attemptNumber < (MAX_ATTEMPTS - 1))
