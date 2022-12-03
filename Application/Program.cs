@@ -13,8 +13,9 @@ namespace Message
         public static void Main(string[] args)
         {
             if (args.Length < 3) {
-                throw new ArgumentException("Main function requires the message recipient " +
+                Console.WriteLine("Main function requires the message recipient " +
                     "address, the message subject, and the message body arguments respectively.");
+                return;
             }
             var host = CreateDefaultBuilder().Build();
             using IServiceScope serviceScope = host.Services.CreateScope();
@@ -70,14 +71,38 @@ namespace Message
                     Credentials = new NetworkCredential(smtpClientLogin, smtpClientPassword),
                 };
 
-                if (smtpClientLogin is null)
+                if (smtpClientLogin is null || smtpClientPassword is null || smtpClientServer is null)
                 {
                     Console.WriteLine("Client login information is invalid");
                     return;
                 }
 
-                MailAddress from = new MailAddress(smtpClientLogin, "Do not reply");
-                MailAddress to = new MailAddress(messageRecipientAddress);
+                MailAddress from;
+                MailAddress to;
+
+                try
+                {
+                    to = new MailAddress(messageRecipientAddress);
+                }
+
+                catch (FormatException)
+                {
+
+                    Console.WriteLine("The provided recipient email address is not in the form required for an email address.");
+                    return;
+                }
+
+                try 
+                {
+                    from = new MailAddress(smtpClientLogin, "Do not reply");
+                }
+
+                catch (FormatException)
+                {
+                    Console.WriteLine("The provided sender email address is not in the form required for an email address.");
+                    return;
+                }
+
                 MailMessage message = new MailMessage(from, to)
                 {
                     Body = messageBody,
@@ -138,7 +163,6 @@ namespace Message
                         }
                     }
                 }
-                
             }
         }
     }
