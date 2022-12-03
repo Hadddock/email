@@ -1,2 +1,2 @@
 # email
-An outgoing email service
+An outgoing email service. Please see releases for information on using the application.
