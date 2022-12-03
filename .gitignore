@@ -6,6 +6,9 @@
 # Ignore appsettings for now
 appsettings*
 
+#ignore log.csv
+log.csv
+
 # User-specific files
 *.rsuser
 *.suo
