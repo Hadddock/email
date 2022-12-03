@@ -33,19 +33,19 @@ function App() {
         <input
           type="text"
           value={email}
-          placeholder="Recipient Email"
+          placeholder="Recipient Email Address"
           onChange={(e) => setEmail(e.target.value)}
         />
         <input
           type="text"
           value={subject}
-          placeholder="Subject"
+          placeholder="Message Subject"
           onChange={(e) => setSubject(e.target.value)}
         />
         <input
           type="text"
           value={body}
-          placeholder="Body"
+          placeholder="Message Body"
           onChange={(e) => setBody(e.target.value)}
         />
 
